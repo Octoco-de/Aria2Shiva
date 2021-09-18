@@ -2,7 +2,7 @@
   "name": "aria2shiva",
   "version": "1.0.0",
   "description": "Telegram bot for Aria2",
-  "main": "index.js",
+  "main": "src/bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
