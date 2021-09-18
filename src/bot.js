@@ -1,6 +1,8 @@
 const TelegramBot = require('node-telegram-bot-api');
 const config = require ('./config')
-// replace the value below with the Telegram token you receive from @BotFather
+const YTSModule = require('./yts')
+
+const areWeDebugging = config.debug
 
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(config.token, {polling: true});
@@ -8,6 +10,7 @@ const bot = new TelegramBot(config.token, {polling: true});
 
 const logginIn = {}
 const sessions = {}
+let messageHandled = false
 
 const validateUser = (chatId, msg) => {
 
@@ -35,22 +38,42 @@ const validateUser = (chatId, msg) => {
 }
 
 // Matches "/echo [whatever]"
-// bot.onText(/\/echo (.+)/, (msg, match) => {
-//   // 'msg' is the received Message from Telegram
-//   // 'match' is the result of executing the regexp above on the text content
-//   // of the message
+bot.onText(/\/Search (.+)/i, (msg, match) => {
+  console.log('gonxas search', msg)
+  // 'msg' is the received Message from Telegram
+  // 'match' is the result of executing the regexp above on the text content
+  // of the message
 
-//   const chatId = msg.chat.id;
-//   const resp = match[1]; // the captured "whatever"
-//   // managed = true
+  const chatId = msg.chat.id;
+  const query = match[1]; // the captured "whatever"
+  YTSModule.search(match[1]).then(movies =>{
+    console.log(movies)
+    if (movies.length === 0) {
+      bot.sendMessage(chatId, "Ain't Nobody Here but Us Chickens");  
+    } else {
+      console.log('movies', movies)
+    }
+  }).catch(error =>{
+    bot.sendMessage(chatId, 'Appologies, there was an error looking for your movie');
+  })
+  // managed = true
 
-//   // send back the matched "whatever" to the chat
-//   bot.sendMessage(chatId, resp);
-// });
+  // send back the matched "whatever" to the chat
+  // bot.sendMessage(chatId, resp);
+});
 
 // Listen for any kind of message. There are different kinds of
 // messages.
 bot.on('message', (msg) => {
+  const command = false
+  msg.entities.map(entitie =>{
+    if (entitie.type === 'bot_command')
+      command = true
+  }) 
+
+  if (!command) {
+
+  console.log('gonxas message', msg)
   const chatId = msg.chat.id;
 
   console.log(`${msg.from.username} : ${msg.chat.id}`)
@@ -59,7 +82,7 @@ bot.on('message', (msg) => {
     bot.sendMessage(chatId, 'Beep Boop. 🤖');
   } else {
 
-    if (sessions[chatId])
+    if (areWeDebugging || sessions[chatId])
       // send a message to the chat acknowledging receipt of their message
       switch(msg.text.toLowerCase()) {
         case 'brainz':
@@ -88,4 +111,5 @@ bot.on('message', (msg) => {
     else
       validateUser(chatId, msg)
   }
+}
 })
