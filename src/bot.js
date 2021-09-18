@@ -10,7 +10,6 @@ const bot = new TelegramBot(config.token, {polling: true});
 
 const logginIn = {}
 const sessions = {}
-let messageHandled = false
 
 const validateUser = (chatId, msg) => {
 
@@ -37,7 +36,7 @@ const validateUser = (chatId, msg) => {
 
 }
 
-// Matches "/echo [whatever]"
+// Matches "/Search [whatever]"
 bot.onText(/\/Search (.+)/i, (msg, match) => {
   console.log('gonxas search', msg)
   // 'msg' is the received Message from Telegram
@@ -46,14 +45,14 @@ bot.onText(/\/Search (.+)/i, (msg, match) => {
 
   const chatId = msg.chat.id;
   const query = match[1]; // the captured "whatever"
-  YTSModule.search(match[1]).then(movies =>{
+  YTSModule.search(query).then(movies =>{
     console.log(movies)
     if (movies.length === 0) {
       bot.sendMessage(chatId, "Ain't Nobody Here but Us Chickens");  
     } else {
       console.log('movies', movies)
     }
-  }).catch(error =>{
+  }).catch(() =>{
     bot.sendMessage(chatId, 'Appologies, there was an error looking for your movie');
   })
   // managed = true
@@ -65,7 +64,7 @@ bot.onText(/\/Search (.+)/i, (msg, match) => {
 // Listen for any kind of message. There are different kinds of
 // messages.
 bot.on('message', (msg) => {
-  const command = false
+  let command = false
   msg.entities.map(entitie =>{
     if (entitie.type === 'bot_command')
       command = true

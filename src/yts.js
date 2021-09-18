@@ -22,7 +22,7 @@ const search = (query)=>{
 
         resolve(parsedMovies)  
     })
-        .catch((error) => {
+        .catch(() => {
             reject()
         })
 
