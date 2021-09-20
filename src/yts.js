@@ -61,7 +61,7 @@ const getMovieDetails = (movieId) => {
             }
             resolve(movieData)
         }).catch((error) => {
-            console.log('movie data error', error)
+            console.log('movie details error', error)
             reject()
         })
     })
