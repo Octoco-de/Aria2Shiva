@@ -2,6 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const config = require('./config')
 const YTSModule = require('./yts')
 const Aria2Module = require('./aria2')
+const utils = require('./utils')
 
 const areWeDebugging = config.debug
 
@@ -45,14 +46,29 @@ const torrentButton = (torrent) => {
   return { text: `${torrent.quality}: ${torrent.size}`, callback_data: torrent.movieId }
 }
 
+const summaryButton = (movieId) => {
+  return [{ text: 'Full Summary', callback_data: `SUM: ${movieId}` }]
+}
+
+const siteButton = (movieData) => {
+  return [{ text: 'Open Site', url: movieData.url }]
+}
+
 const userSelectedMovie = (chatId, movieId) => {
   YTSModule.getMovieDetails(movieId).then(movieData => {
     const buttons = []
     movieData.torrents.map(torrent => {
       buttons.push([torrentButton(torrent)])
     })
+    buttons.push(summaryButton(movieId))
+    buttons.push(siteButton(movieData))
 
-    const caption = `${movieData.title}\n \`${movieData.summary}\``
+    let caption = movieData.title
+
+    if (movieData.summary) {
+      let summary = utils.constrainTextToLenght(movieData.summary, 150)
+      caption = `${caption}\n\n\`${summary}\``
+    }
 
     bot.sendPhoto(
       chatId,
@@ -63,6 +79,15 @@ const userSelectedMovie = (chatId, movieId) => {
         reply_markup: { inline_keyboard: buttons }
       },
     )
+  }).catch(() => {
+    bot.sendMessage(chatId, 'Well this is embarrassing....');
+  })
+}
+
+const displaySummary = (chatId, movieId) => {
+  YTSModule.getMovieDetails(movieId).then(movieData => {
+    console.log('summary movie data', movieData)
+    bot.sendMessage(chatId, `\`${movieData.summary}\``, { parse_mode: "Markdown" });
   }).catch(() => {
     bot.sendMessage(chatId, 'Well this is embarrassing....');
   })
@@ -109,6 +134,9 @@ bot.on('callback_query', function onCallbackQuery(button) {
 
   if (data.indexOf('movie: ') !== -1) {
     userSelectedMovie(button.from.id, data.replace('movie: ', ''))
+  } else if (data.indexOf('SUM: ') !== -1) {
+    console.log('gonxas data', data)
+    displaySummary(button.from.id, data.replace('SUM: ', ''))
   } else {
     // console.log('button', button)
     // console.log('caption_entities', button.caption_entities)
@@ -134,7 +162,7 @@ bot.on('message', (msg) => {
 
     const chatId = msg.chat.id;
 
-    // console.log(`${msg.from.username} : ${msg.chat.id}`)
+    // console.log(`${ msg.from.username } : ${ msg.chat.id } `)
 
     if (msg.text.toLowerCase() === '/start') {
       bot.sendMessage(chatId, 'Beep Boop. 🤖');
@@ -160,7 +188,7 @@ bot.on('message', (msg) => {
           case 'alo':
           case 'elo':
           case 'hello':
-            bot.sendMessage(chatId, `Greetings ${msg.from.first_name}`);
+            bot.sendMessage(chatId, `Greetings ${msg.from.first_name} `);
             break
           default:
             bot.sendMessage(chatId, 'nani');

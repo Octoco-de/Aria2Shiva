@@ -34,11 +34,11 @@ const search = (query) => {
 }
 
 const getMovieDetails = (movieId) => {
-
     const promise = new Promise((resolve, reject) => {
         const url = `${baseUrl}movie_details.json?movie_id=${movieId}`
         axios.get(url).then((resp) => {
             const movie = resp?.data?.data?.movie
+
             const movieId = movie.id
             const torrents = []
             movie.torrents.map(torrent => {
@@ -57,6 +57,7 @@ const getMovieDetails = (movieId) => {
                 image: movie.medium_cover_image,
                 summary: movie.description_full,
                 torrents: torrents,
+                url: movie.url,
             }
             resolve(movieData)
         }).catch((error) => {
