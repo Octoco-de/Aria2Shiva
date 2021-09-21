@@ -6,6 +6,8 @@ const utils = require('./utils')
 
 const areWeDebugging = config.debug
 
+utils.shortenLink('http://www.gonxas.com')
+
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(config.token, { polling: true });
 
@@ -49,7 +51,7 @@ const torrentButton = (torrent) => {
     size = size.replace(' MB', '')
     size = Math.ceil(size) + ' MB'
   }
-  return { text: `${torrent.quality} ${size}`, callback_data: torrent.movieId }
+  return { text: `${torrent.quality} ${size}`, callback_data: torrent.shortLink }
 }
 
 const summaryButton = (movieId) => {
@@ -81,36 +83,54 @@ const userSelectedMovie = (chatId, movieId) => {
   YTSModule.getMovieDetails(movieId).then(movieData => {
     let tempArray = []
     const buttons = []
-    movieData.torrents.map(torrent => {
-      tempArray.push(torrentButton(torrent))
-      if (tempArray.length === 2) {
-        buttons.push(tempArray)
-        tempArray = []
-      }
+    const promises = []
+
+    const torrents = movieData.torrents
+
+    torrents.map(torrent => {
+      const p = utils.shortenLink(torrent.url).then((shortLink) => {
+        torrent.shortLink = shortLink
+      }).catch(() => {
+        bot.sendMessage(chatId, 'Well this is embarrassing...');
+      })
+      promises.push(p)
     })
-    if (tempArray.length > 0) {
-      buttons.push(tempArray)
-    }
 
-    buttons.push(summaryButton(movieId))
-    buttons.push(siteButton(movieData))
+    Promise.all(promises).then(() => {
+      torrents.map(torrent => {
+        tempArray.push(torrentButton(torrent))
+        if (tempArray.length === 2) {
+          buttons.push(tempArray)
+          tempArray = []
+        }
+      })
+      if (tempArray.length > 0) {
+        buttons.push(tempArray)
+      }
 
-    let caption = movieData.title
+      buttons.push(summaryButton(movieId))
+      buttons.push(siteButton(movieData))
 
-    if (movieData.summary) {
-      let summary = utils.constrainTextToLenght(movieData.summary, 150)
-      caption = `${caption}\n\n\`${summary}\``
-    }
+      let caption = movieData.title
 
-    bot.sendPhoto(
-      chatId,
-      movieData.image,
-      {
-        caption,
-        parse_mode: "Markdown",
-        reply_markup: { inline_keyboard: buttons }
-      },
-    )
+      if (movieData.summary) {
+        let summary = utils.constrainTextToLenght(movieData.summary, 150)
+        caption = `${caption}\n\n\`${summary}\``
+      }
+
+      bot.sendPhoto(
+        chatId,
+        movieData.image,
+        {
+          caption,
+          parse_mode: "Markdown",
+          reply_markup: { inline_keyboard: buttons }
+        },
+      )
+    }).catch(error => {
+      console.error('Error awaiting short urls, ', error)
+      bot.sendMessage(chatId, 'Well this is embarrassing....');
+    })
   }).catch(() => {
     bot.sendMessage(chatId, 'Well this is embarrassing....');
   })
@@ -124,10 +144,9 @@ const displaySummary = (chatId, movieId) => {
   })
 }
 
-// const downloadYTSMovie = (chatId, movieId, quality) => {
-//   console('downloadYTSMovie', movieId, quality)
-//   Aria2Module.downlaodTorrent(torrent.url)
-// }
+const downloadYTSMovie = (chatId, url) => {
+  Aria2Module.downlaodTorrent(bot, chatId, url)
+}
 
 // Button's Handler
 bot.on('callback_query', function onCallbackQuery(button) {
@@ -137,15 +156,9 @@ bot.on('callback_query', function onCallbackQuery(button) {
   if (data.indexOf('movie: ') !== -1) {
     userSelectedMovie(button.from.id, data.replace('movie: ', ''))
   } else if (data.indexOf('SUM: ') !== -1) {
-    console.log('gonxas data', data)
     displaySummary(button.from.id, data.replace('SUM: ', ''))
   } else {
-    // console.log('button', button)
-    // console.log('caption_entities', button.caption_entities)
-    // button.photo.map(object => {
-    //   console.log('photo', object)
-    // })
-    // downloadYTSMovie(button.from.id, data, button.msg)
+    downloadYTSMovie(button.from.id, 'https://bit.ly/' + data)
   }
 
 })

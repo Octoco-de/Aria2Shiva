@@ -9,21 +9,31 @@ const constrainTextToLenght = (text, lenght) => {
     return result
 }
 
-const shortLink = (link) => {
+const shortenLink = (link) => {
     const promise = new Promise((resolve, reject) => {
         const url = 'https://api-ssl.bitly.com/v4/shorten'
         const data = {
-            "group_guid": "Aria2Shiva",
-            "domain": "octoco.de",
+            "group_guid": "Bl9knMjyJNh",
             "long_url": link
         }
-        axios.get(url).then((resp) => {
-            console.log('gonxas response', resp)
+        const conf = {
+            headers: { Authorization: `Bearer ${config.bitlyToken}` }
+        };
+        axios.post(url, data, conf).then((resp) => {
+            const link = resp?.data?.link
+            if (link)
+                resolve(link.replace('https://bit.ly/', ''))
+            else
+                reject()
         }).catch((error) => {
-            console.log('Bitly error', error)
+            console.log('Bitly error', `${error.response.status}: ${error.response.statusText}\n\n${error}`)
+            reject()
+
         })
     })
+
+    return promise
 }
 
 
-module.exports = { constrainTextToLenght, shortLink }
+module.exports = { constrainTextToLenght, shortenLink }
