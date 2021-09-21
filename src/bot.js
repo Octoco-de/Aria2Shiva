@@ -12,6 +12,7 @@ const bot = new TelegramBot(config.token, { polling: true });
 
 const logginIn = {}
 const sessions = {}
+const searchingMovie = {}
 
 const validateUser = (chatId, msg) => {
 
@@ -57,6 +58,23 @@ const summaryButton = (movieId) => {
 
 const siteButton = (movieData) => {
   return [{ text: 'Open Site', url: movieData.url }]
+}
+
+const searchMovie = (chatId, query) => {
+  YTSModule.search(query).then(movies => {
+    if (!movies || movies.length === 0) {
+      bot.sendMessage(chatId, "Ain't Nobody Here but Us Chickens");
+    } else {
+      const buttons = []
+      movies.map(movie => {
+        movie.chatId = chatId
+        buttons.push(movieButton(movie))
+      })
+      bot.sendMessage(chatId, 'This is what I found for you 👀', { reply_markup: { inline_keyboard: buttons } });
+    }
+  }).catch(() => {
+    bot.sendMessage(chatId, 'Well this is embarrassing...');
+  })
 }
 
 const userSelectedMovie = (chatId, movieId) => {
@@ -159,7 +177,7 @@ bot.onText(/\/Stop/i, (msg) => {
 });
 
 // Matches "/Search [whatever]"
-bot.onText(/\/Search (.+)/i, (msg, match) => {
+bot.onText(/\/Search(.*)/i, (msg, match) => {
   // 'msg' is the received Message from Telegram
   // 'match' is the result of executing the regexp above on the text content
   // of the message
@@ -168,21 +186,16 @@ bot.onText(/\/Search (.+)/i, (msg, match) => {
 
   if (areWeDebugging || sessions[chatId]) {
 
-    const query = match[1]; // the captured "whatever"
-    YTSModule.search(query).then(movies => {
-      if (!movies || movies.length === 0) {
-        bot.sendMessage(chatId, "Ain't Nobody Here but Us Chickens");
-      } else {
-        const buttons = []
-        movies.map(movie => {
-          movie.chatId = chatId
-          buttons.push(movieButton(movie))
-        })
-        bot.sendMessage(chatId, 'This is what we found for you 👀', { reply_markup: { inline_keyboard: buttons } });
-      }
-    }).catch(() => {
-      bot.sendMessage(chatId, 'Well this is embarrassing...');
-    })
+    const query = match[1].trim() // the captured "whatever"
+
+    if (query)
+      searchMovie(chatId, query)
+    else {
+      bot.sendMessage(chatId, 'What are we looking for?');
+      searchingMovie[chatId] = true
+    }
+
+
 
   } else {
     validateUser(chatId, msg)
@@ -195,6 +208,15 @@ bot.onText(/\/Search (.+)/i, (msg, match) => {
 // Listen for any kind of message. There are different kinds of
 // messages.
 bot.on('message', (msg) => {
+
+  const chatId = msg.chat.id;
+
+  if (searchingMovie[chatId]) {
+    searchingMovie[chatId] = false
+    searchMovie(chatId, msg.text)
+    return
+  }
+
   let command = false
   msg.entities?.map(entitie => {
     if (entitie.type === 'bot_command')
@@ -203,8 +225,6 @@ bot.on('message', (msg) => {
 
   //commands will be captured in their own methods. Here's pure talk.
   if (!command) {
-
-    const chatId = msg.chat.id;
 
     // console.log(`${ msg.from.username } : ${ msg.chat.id } `)
 
