@@ -138,6 +138,11 @@ bot.on('callback_query', function onCallbackQuery(button) {
 
 //--------- COMMAND METHODS
 
+bot.onText(/\/Start/i, (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, 'Beep Boop. 🤖')
+});
+
 // Matches "/Search [whatever]"
 bot.onText(/\/Search (.+)/i, (msg, match) => {
   // 'msg' is the received Message from Telegram
@@ -167,11 +172,6 @@ bot.onText(/\/Search (.+)/i, (msg, match) => {
   } else {
     validateUser(chatId, msg)
   }
-});
-
-bot.onText(/\/Start (.+)/i, (msg) => {
-  const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Beep Boop. 🤖')
 });
 
 //--------- 
