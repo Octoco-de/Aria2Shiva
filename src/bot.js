@@ -143,6 +143,21 @@ bot.onText(/\/Start/i, (msg) => {
   bot.sendMessage(chatId, 'Beep Boop. 🤖')
 });
 
+bot.onText(/\/Stop/i, (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, "Don't stop me now")
+  setTimeout(() => {
+    bot.sendMessage(chatId, "'Cause I'm having a good time")
+  }, 1000)
+  setTimeout(() => {
+    bot.sendMessage(chatId, "Don't stop me now")
+  }, 2000)
+  setTimeout(() => {
+    bot.sendMessage(chatId, "Yes I'm havin' a good time\nI don't want to stop at all.")
+  }, 3000)
+
+});
+
 // Matches "/Search [whatever]"
 bot.onText(/\/Search (.+)/i, (msg, match) => {
   // 'msg' is the received Message from Telegram
@@ -181,7 +196,7 @@ bot.onText(/\/Search (.+)/i, (msg, match) => {
 // messages.
 bot.on('message', (msg) => {
   let command = false
-  msg.entities.map(entitie => {
+  msg.entities?.map(entitie => {
     if (entitie.type === 'bot_command')
       command = true
   })
@@ -193,7 +208,7 @@ bot.on('message', (msg) => {
 
     // console.log(`${ msg.from.username } : ${ msg.chat.id } `)
 
-    if (areWeDebugging || sessions[chatId])
+    if (areWeDebugging || sessions[chatId]) {
       // send a message to the chat acknowledging receipt of their message
       switch (msg.text.toLowerCase()) {
         case 'brainz':
@@ -222,7 +237,7 @@ bot.on('message', (msg) => {
           bot.sendMessage(chatId, 'nani');
       }
 
-    else
+    } else
       validateUser(chatId, msg)
   }
 })
