@@ -1,7 +1,12 @@
 import math
+import subprocess
+import os
+import shlex
+import hashlib
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
+from pathlib import Path
 
 from src.yts import search, get_movie_details
 from src.utils import constrain_text_to_length, shorten_link 
@@ -18,12 +23,12 @@ def movie_button(movie):
     ]
 
 # Create a torrent button for the inline keyboard
-def torrent_button(torrent):
+def torrent_button(torrent, movie_id, index):
     size = torrent['size'].upper()
     if " MB" in size:
         size = size.replace(" MB", "")
         size = f"{math.ceil(float(size))} MB"
-    return InlineKeyboardButton(text=f"{torrent['quality']} {size}", callback_data=f"downloadMovie:{torrent['shortLink']}")
+    return InlineKeyboardButton(text=f"{torrent['quality']} {size}", callback_data=f"dowM:{movie_id}:{index}")
 
 
 
@@ -50,29 +55,26 @@ async def search_movie(update, context, chat_id, query):
         await context.bot.send_message(chat_id, 'Well this is embarrassing...')
 
 
-# Handle the user's movie selection and display movie details and download options
 async def user_selected_movie(update, context, chat_id, movie_id):
     try:
-        movie_data = await get_movie_details(movie_id)
+        context.user_data["selected_movie_id"] = movie_id
+        movie_data = await get_movie_details(movie_id) # Store the movie_id in user_data
         temp_array = []
         buttons = []
 
         torrents = movie_data['torrents']
 
-        for torrent in torrents:
+        for index, torrent in enumerate(torrents):
             if torrent['url']:  # Check if torrent URL is not empty
-                short_link = await shorten_link(torrent['url'])
-                if short_link:  # Check if there is a short link
-                    torrent['shortLink'] = short_link
-                    temp_array.append(torrent_button(torrent))
-                    if len(temp_array) == 2:
-                        buttons.append(temp_array)
-                        temp_array = []
+                temp_array.append(torrent_button(torrent, movie_id, index))
+                if len(temp_array) == 2:
+                    buttons.append(temp_array)
+                    temp_array = []
 
         if len(temp_array) > 0:
             buttons.append(temp_array)
 
-        # Append both buttons as a list to create a single row
+        # Append context.both buttons as a list to create a single row
         buttons.append([summary_button(movie_id), site_button(movie_data)])
 
         caption = movie_data['title']
@@ -96,10 +98,13 @@ async def user_selected_movie(update, context, chat_id, movie_id):
 
 
 
+
+
 # Display the full movie summary for the selected movie
 async def display_summary(update, context, chat_id, movie_id):
     print(f"display_summary {movie_id}")
     try:
+        print(f'movie id {movie_id}')
         movie_data = await get_movie_details(movie_id)
         await context.bot.send_message(chat_id, f"`{movie_data['summary']}`", parse_mode="Markdown")
     except Exception:
@@ -107,12 +112,46 @@ async def display_summary(update, context, chat_id, movie_id):
 
 
 # Download the selected movie using the provided torrent URL
-def download_yts_movie(context, chat_id, url):
-    # Aria2Module.download_torrent(context.bot, chat_id, url)
-    print('aria2')
+async def download_torrent(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id, url):
+    try:
+        session_id = hashlib.md5(url.encode()).hexdigest()
+        tmux_session_name = f"Aria2Shiva-{session_id}"
+
+        # Check if there is an existing session with the same name
+        existing_sessions_output = subprocess.check_output(['tmux', 'list-sessions']).decode()
+        if tmux_session_name in existing_sessions_output:
+            await context.bot.send_message(chat_id, "This download has already started!")
+            return
+
+        tmux_cmd = ['tmux', 'new-session', '-d', '-s', tmux_session_name]
+        subprocess.run(tmux_cmd, check=True)
+
+        download_directory = os.path.expanduser('~/Torrents')
+
+        aria2c_cmd = [
+            'aria2c', url, '-d', download_directory, '-s', '16', '-x', '16', '-k', '1M', '-c'
+        ]
+
+        subprocess.run(['tmux', 'send-keys', '-t', tmux_session_name, ' '.join(aria2c_cmd), 'C-m'], check=True)
+
+        await context.bot.send_message(chat_id, "The download has started! I'll notify you when it's done.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error starting tmux or aria2c: {e}")
+        await context.bot.send_message(chat_id, "Oops! There was an error starting the download. Please try again later.")
+    except Exception as e:
+        print(f"Unknown error: {e}")
+        await context.bot.send_message(chat_id, "Oops! Something went wrong. Please try again later.")
+
+
+
+
+
+
 
 # Handle button callbacks from the inline keyboard
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+
     query = update.callback_query
     data = query.data
     chat_id = update.effective_chat.id
@@ -121,15 +160,32 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if data.startswith("userselectedmovie:"):
         movie_id = data.split(':')[1]
+        context.user_data['selected_movie_id'] = movie_id
+        print(f'userselectedmovie movie id {movie_id}')
         await user_selected_movie(update, context, chat_id, movie_id)
-    # elif 'movie: ' in data:
-    #     user_selected_movie(update, context, chat_id, data.replace('movie: ', ''))
-    elif 'SUM: ' in data:
-        display_summary(update, context, chat_id, data.replace('SUM: ', ''))
-    elif 'downloadMovie' in data:
-        print(f"doanloawMoviePressed: {data}")
+    elif 'SUM:' in data:
+        movie_id = data.split(':')[1]
+        movie_data = await get_movie_details(movie_id)
+        summary = movie_data['summary'] or "No summary available."
+        await context.bot.send_message(chat_id, f"`{summary}`", parse_mode="Markdown")
+    elif 'dowM:' in data:
+        _, movie_id, torrent_index = data.split(':')
+        torrent_index = int(torrent_index)
+        movie_data = await get_movie_details(movie_id)
+        torrent_url = movie_data['torrents'][torrent_index]['url']
+        await download_torrent(update, context, chat_id, torrent_url)
     else:
-        download_yts_movie(context, chat_id, 'https://bit.ly/' + data)
+        await context.bot.send_message(chat_id, "Unknown command. Please try again.")
+
+
+    
+
+    
+        
+    
+    
+
+
 
 
 

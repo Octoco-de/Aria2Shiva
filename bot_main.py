@@ -37,10 +37,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 
 # Import the action functions from actions.py
-from src.actions import (
-    button_callback,
-    search_movie, user_selected_movie, display_summary, download_yts_movie
-)
+from src.actions import ( button_callback, search_movie, download_torrent )
 
 # Enable logging
 logging.basicConfig(
@@ -88,10 +85,6 @@ def main() -> None:
     application.add_handler(CommandHandler("help", help_command))
 
     application.add_handler(CommandHandler("search", search_command))
-    application.add_handler(CommandHandler("userselectedmovie", user_selected_movie))
-    application.add_handler(CommandHandler("displaysummary", display_summary))
-    application.add_handler(CommandHandler("downloadytsmovie", download_yts_movie))
-
 
     application.add_handler(CallbackQueryHandler(button_callback))
 
