@@ -14,7 +14,7 @@ config.py
 *.DS_Store
 
 # Python cache
-src/__pycache__
+*__pycache__
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

@@ -17,7 +17,7 @@ bot.
 
 import logging
 
-from config import telegram_token
+from config import telegram_token, allowedIDs
 
 from telegram import __version__ as TG_VER
 
@@ -34,6 +34,12 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
     )
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+
+
+# Import the action functions from actions.py
+from src.actions import (
+    search_movie, user_selected_movie, display_summary, download_yts_movie
+)
 
 # Enable logging
 logging.basicConfig(
@@ -62,6 +68,16 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Echo the user message."""
     await update.message.reply_text(update.message.text)
 
+async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    query = ' '.join(context.args)
+    if query:
+        await search_movie(update, context, chat_id, query)
+    else:
+        await update.message.reply_text("Please provide a movie title to search for.")
+
+
+
 
 def main() -> None:
     """Start the bot."""
@@ -71,6 +87,11 @@ def main() -> None:
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+
+    application.add_handler(CommandHandler("search", search_command))
+    application.add_handler(CommandHandler("userselectedmovie", user_selected_movie))
+    application.add_handler(CommandHandler("displaysummary", display_summary))
+    application.add_handler(CommandHandler("downloadytsmovie", download_yts_movie))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
