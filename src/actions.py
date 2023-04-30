@@ -1,8 +1,11 @@
 import math
 
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
+
 from src.yts import search, get_movie_details
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from src.utils import constrain_text_to_length, shorten_link
+from src.utils import constrain_text_to_length, shorten_link 
+
 
 
 # Create a movie button for the inline keyboard
@@ -20,7 +23,7 @@ def torrent_button(torrent):
     if " MB" in size:
         size = size.replace(" MB", "")
         size = f"{math.ceil(float(size))} MB"
-    return InlineKeyboardButton(text=f"{torrent['quality']} {size}", callback_data=torrent['shortLink'])
+    return InlineKeyboardButton(text=f"{torrent['quality']} {size}", callback_data=f"downloadMovie:{torrent['shortLink']}")
 
 
 
@@ -95,6 +98,7 @@ async def user_selected_movie(update, context, chat_id, movie_id):
 
 # Display the full movie summary for the selected movie
 async def display_summary(update, context, chat_id, movie_id):
+    print(f"display_summary {movie_id}")
     try:
         movie_data = await get_movie_details(movie_id)
         await context.bot.send_message(chat_id, f"`{movie_data['summary']}`", parse_mode="Markdown")
@@ -108,14 +112,24 @@ def download_yts_movie(context, chat_id, url):
     print('aria2')
 
 # Handle button callbacks from the inline keyboard
-def button_handler(update, context):
-    button_data = update.callback_query.data
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    data = query.data
+    chat_id = update.effective_chat.id
 
-    if 'movie: ' in button_data:
-        user_selected_movie(update, context, update.callback_query.from_user.id, button_data.replace('movie: ', ''))
-    elif 'SUM: ' in button_data:
-        display_summary(update, context, update.callback_query.from_user.id, button_data.replace('SUM: ', ''))
+    print(f'querty data {data}')
+
+    if data.startswith("userselectedmovie:"):
+        movie_id = data.split(':')[1]
+        await user_selected_movie(update, context, chat_id, movie_id)
+    # elif 'movie: ' in data:
+    #     user_selected_movie(update, context, chat_id, data.replace('movie: ', ''))
+    elif 'SUM: ' in data:
+        display_summary(update, context, chat_id, data.replace('SUM: ', ''))
+    elif 'downloadMovie' in data:
+        print(f"doanloawMoviePressed: {data}")
     else:
-        download_yts_movie(context, update.callback_query.from_user.id, 'https://bit.ly/' + button_data)
+        download_yts_movie(context, chat_id, 'https://bit.ly/' + data)
+
 
 

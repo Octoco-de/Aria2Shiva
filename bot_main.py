@@ -38,6 +38,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 # Import the action functions from actions.py
 from src.actions import (
+    button_callback,
     search_movie, user_selected_movie, display_summary, download_yts_movie
 )
 
@@ -75,16 +76,6 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await search_movie(update, context, chat_id, query)
     else:
         await update.message.reply_text("Please provide a movie title to search for.")
-
-
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    data = query.data
-    chat_id = update.effective_chat.id
-
-    if data.startswith("userselectedmovie:"):
-        movie_id = data.split(':')[1]
-        await user_selected_movie(update, context, chat_id, movie_id)
 
 
 def main() -> None:
