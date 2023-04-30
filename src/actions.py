@@ -1,5 +1,8 @@
+import math
+
 from src.yts import search, get_movie_details
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from src.utils import constrain_text_to_length, shorten_link
 
 
 # Create a movie button for the inline keyboard
@@ -13,11 +16,12 @@ def movie_button(movie):
 
 # Create a torrent button for the inline keyboard
 def torrent_button(torrent):
-    size = torrent.size.upper()
+    size = torrent['size'].upper()
     if " MB" in size:
         size = size.replace(" MB", "")
         size = f"{math.ceil(float(size))} MB"
-    return InlineKeyboardButton(text=f"{torrent.quality} {size}", callback_data=torrent.shortLink)
+    return InlineKeyboardButton(text=f"{torrent['quality']} {size}", callback_data=torrent['shortLink'])
+
 
 
 # Create a summary button for the inline keyboard
@@ -26,7 +30,7 @@ def summary_button(movie_id):
 
 # Create a site button for the inline keyboard
 def site_button(movie_data):
-    return InlineKeyboardButton(text="Open Site", url=movie_data.url)
+    return InlineKeyboardButton(text="Open Yts", url=movie_data['url'])
 
 # Search for a movie using the provided query
 async def search_movie(update, context, chat_id, query):
@@ -44,36 +48,37 @@ async def search_movie(update, context, chat_id, query):
 
 
 # Handle the user's movie selection and display movie details and download options
-async def user_selected_movie(chat_id, movie_id):
+async def user_selected_movie(update, context, chat_id, movie_id):
     try:
         movie_data = await get_movie_details(movie_id)
         temp_array = []
         buttons = []
-        promises = []
 
         torrents = movie_data['torrents']
 
         for torrent in torrents:
-            short_link = await utils.shorten_link(torrent['url'])
-            torrent['shortLink'] = short_link
-            temp_array.append(torrent_button(torrent))
-            if len(temp_array) == 2:
-                buttons.append(temp_array)
-                temp_array = []
-        
+            if torrent['url']:  # Check if torrent URL is not empty
+                short_link = await shorten_link(torrent['url'])
+                if short_link:  # Check if there is a short link
+                    torrent['shortLink'] = short_link
+                    temp_array.append(torrent_button(torrent))
+                    if len(temp_array) == 2:
+                        buttons.append(temp_array)
+                        temp_array = []
+
         if len(temp_array) > 0:
             buttons.append(temp_array)
 
-        buttons.append(summary_button(movie_id))
-        buttons.append(site_button(movie_data))
+        # Append both buttons as a list to create a single row
+        buttons.append([summary_button(movie_id), site_button(movie_data)])
 
         caption = movie_data['title']
 
         if movie_data['summary']:
-            summary = utils.constrain_text_to_length(movie_data['summary'], 150)
+            summary = await constrain_text_to_length(movie_data['summary'], 150)
             caption = f"{caption}\n\n`{summary}`"
 
-        await bot.send_photo(
+        await context.bot.send_photo(
             chat_id,
             movie_data['image'],
             caption=caption,
@@ -82,7 +87,9 @@ async def user_selected_movie(chat_id, movie_id):
         )
     except Exception as error:
         print(f"Error while handling user_selected_movie: {error}")
-        await bot.send_message(chat_id, 'Well this is embarrassing....')
+        await context.bot.send_message(chat_id, 'Well this is embarrassing....')
+
+
 
 
 
@@ -90,9 +97,9 @@ async def user_selected_movie(chat_id, movie_id):
 async def display_summary(update, context, chat_id, movie_id):
     try:
         movie_data = await get_movie_details(movie_id)
-        await bot.send_message(chat_id, f"`{movie_data['summary']}`", parse_mode="Markdown")
+        await context.bot.send_message(chat_id, f"`{movie_data['summary']}`", parse_mode="Markdown")
     except Exception:
-        await bot.send_message(chat_id, 'Well this is embarrassing....')
+        await context.bot.send_message(chat_id, 'Well this is embarrassing....')
 
 
 # Download the selected movie using the provided torrent URL

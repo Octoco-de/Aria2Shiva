@@ -33,7 +33,7 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
 from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 
 
 # Import the action functions from actions.py
@@ -77,6 +77,14 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("Please provide a movie title to search for.")
 
 
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    data = query.data
+    chat_id = update.effective_chat.id
+
+    if data.startswith("userselectedmovie:"):
+        movie_id = data.split(':')[1]
+        await user_selected_movie(update, context, chat_id, movie_id)
 
 
 def main() -> None:
@@ -92,6 +100,9 @@ def main() -> None:
     application.add_handler(CommandHandler("userselectedmovie", user_selected_movie))
     application.add_handler(CommandHandler("displaysummary", display_summary))
     application.add_handler(CommandHandler("downloadytsmovie", download_yts_movie))
+
+
+    application.add_handler(CallbackQueryHandler(button_callback))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))

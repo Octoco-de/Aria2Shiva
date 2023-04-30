@@ -27,40 +27,42 @@ async def search(query):
             return None
 
 
-def get_movie_details(movie_id):
+async def get_movie_details(movie_id):
     url = f'{base_url}movie_details.json?movie_id={movie_id}'
-    response = requests.get(url)
 
-    try:
-        response.raise_for_status()
-        data = response.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            try:
+                response.raise_for_status()
+                data = await response.json()
 
-        movie = data.get('data', {}).get('movie', {})
+                movie = data.get('data', {}).get('movie', {})
 
-        torrents = [
-            {
-                'movieId': movie['id'],
-                'url': torrent['url'],
-                'quality': torrent['quality'],
-                'size': torrent['size'],
-            }
-            for torrent in movie.get('torrents', [])
-        ]
+                torrents = [
+                    {
+                        'movieId': movie['id'],
+                        'url': torrent['url'],
+                        'quality': torrent['quality'],
+                        'size': torrent['size'],
+                    }
+                    for torrent in movie.get('torrents', [])
+                ]
 
-        movie_data = {
-            'id': movie['id'],
-            'title': f"({movie['year']}) - {movie['title']}",
-            'language': movie['language'],
-            'image': movie['medium_cover_image'],
-            'summary': movie['description_full'],
-            'torrents': torrents,
-            'url': movie['url'],
-        }
+                movie_data = {
+                    'id': movie['id'],
+                    'title': f"({movie['year']}) - {movie['title']}",
+                    'language': movie['language'],
+                    'image': movie['medium_cover_image'],
+                    'summary': movie['description_full'],
+                    'torrents': torrents,
+                    'url': movie['url'],
+                }
 
-        return movie_data
-    except requests.exceptions.RequestException as error:
-        print(f'movie details error: {error}')
-        return None
+                return movie_data
+            except Exception as error:
+                print(f'movie details error: {error}')
+                return None
+
 
 if __name__ == "__main__":
     # Example usage
