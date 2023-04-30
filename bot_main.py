@@ -1,24 +1,5 @@
-#!/usr/bin/env python
-# pylint: disable=unused-argument, wrong-import-position
-# This program is dedicated to the public domain under the CC0 license.
-
-"""
-Simple Bot to reply to Telegram messages.
-
-First, a few handler functions are defined. Then, those functions are passed to
-the Application and registered at their respective places.
-Then, the bot is started and runs until we press Ctrl-C on the command line.
-
-Usage:
-Basic Echobot example, repeats messages.
-Press Ctrl-C on the command line or send a signal to the process to stop the
-bot.
-"""
-
 import logging
-
 from config import telegram_token, allowedIDs
-
 from telegram import __version__ as TG_VER
 
 try:
@@ -32,12 +13,13 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
         f"{TG_VER} version of this example, "
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
-from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
-
+from telegram import ForceReply, Update, InputMediaAnimation
+from telegram.ext import (
+    Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
+)
 
 # Import the action functions from actions.py
-from src.actions import ( button_callback, search_movie, download_torrent )
+from src.actions import button_callback, search_movie, download_torrent
 
 # Enable logging
 logging.basicConfig(
@@ -56,11 +38,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup=ForceReply(selective=True),
     )
 
-
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
     await update.message.reply_text("Help!")
-
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Echo the user message."""
@@ -74,6 +54,13 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await update.message.reply_text("Please provide a movie title to search for.")
 
+async def download_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    torrent_url = ' '.join(context.args)
+    if torrent_url:
+        await download_torrent(update, context, chat_id, torrent_url)
+    else:
+        await update.message.reply_text("Please provide a torrent URL or a magnet link to download.")
 
 def main() -> None:
     """Start the bot."""
@@ -83,8 +70,8 @@ def main() -> None:
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
-
     application.add_handler(CommandHandler("search", search_command))
+    application.add_handler(CommandHandler("download", download_command))
 
     application.add_handler(CallbackQueryHandler(button_callback))
 
@@ -97,3 +84,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    
