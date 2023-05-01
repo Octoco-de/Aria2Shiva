@@ -111,9 +111,29 @@ async def display_summary(update, context, chat_id, movie_id):
         await context.bot.send_message(chat_id, 'Well this is embarrassing....')
 
 
+
+
+
+# Function to check if tmux is running
+def is_tmux_running():
+    try:
+        subprocess.check_output(['tmux', 'ls'], stderr=subprocess.PIPE)
+        return True
+    except subprocess.CalledProcessError as e:
+        if "error connecting" in str(e.stderr) or "no server running" in str(e.stderr):
+            return False
+        return True
+
 # Download the selected movie using the provided torrent URL
 async def download_torrent(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id, url):
     try:
+        # Check if tmux is running, and start it if it isn't
+        created_new_session = False
+        if not is_tmux_running():
+            created_new_session = True
+            subprocess.run(['tmux', 'new-session', '-d', '-s', 'mysession'], check=True)
+            
+
         session_id = hashlib.md5(url.encode()).hexdigest()
         tmux_session_name = f"Aria2Shiva-{session_id}"
 
@@ -129,19 +149,24 @@ async def download_torrent(update: Update, context: ContextTypes.DEFAULT_TYPE, c
         download_directory = os.path.expanduser('~/Torrents')
 
         aria2c_cmd = [
-            'aria2c', url, '-d', download_directory, '-s', '16', '-x', '16', '-k', '1M', '-c'
+            'aria2c', url, '-d', download_directory, '-s', '16', '-x', '16', '-k', '1M', '-c', '--seed-time=0'
         ]
 
-        subprocess.run(['tmux', 'send-keys', '-t', tmux_session_name, ' '.join(aria2c_cmd), 'C-m'], check=True)
+        # Execute the aria2c command and close the tmux session when the process is done
+        tmux_send_keys_cmd = ['tmux', 'send-keys', '-t', tmux_session_name, ' '.join(aria2c_cmd), 'C-m', ';']
+        subprocess.run(tmux_send_keys_cmd, check=True)
 
-        await context.bot.send_message(chat_id, "The download has started! I'll notify you when it's done.")
+        # Kill mysession if it was used to start the server
+        if created_new_session:
+            subprocess.run(['tmux', 'kill-session', '-t', 'mysession'], check=True)
+
+        await context.bot.send_message(chat_id, "The download has started!")
     except subprocess.CalledProcessError as e:
         print(f"Error starting tmux or aria2c: {e}")
         await context.bot.send_message(chat_id, "Oops! There was an error starting the download. Please try again later.")
     except Exception as e:
         print(f"Unknown error: {e}")
         await context.bot.send_message(chat_id, "Oops! Something went wrong. Please try again later.")
-
 
 
 
