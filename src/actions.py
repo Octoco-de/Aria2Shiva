@@ -149,7 +149,7 @@ async def download_torrent(update: Update, context: ContextTypes.DEFAULT_TYPE, c
         download_directory = os.path.expanduser('~/Torrents')
 
         aria2c_cmd = [
-            'aria2c', url, '-d', download_directory, '-s', '16', '-x', '16', '-k', '1M', '-c', '--seed-time=0'
+            'cd', download_directory, '&&', 'aria2c', url, '-s', '16', '-x', '16', '-k', '1M', '-c', '--seed-time=0'
         ]
 
         # Execute the aria2c command and close the tmux session when the process is done
