@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes
 from pathlib import Path
 
 from src.yts import search, get_movie_details
-from src.utils import constrain_text_to_length, shorten_link 
+from src.utils import constrain_text_to_length 
 
 
 
