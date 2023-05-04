@@ -9,29 +9,34 @@ To run this bot, you need to have Python, tmux, and aria2c installed on your sys
 
 ### Installing tmux on Unix and macOS
 
-To install tmux on Unix and macOS, follow these steps:
+* To install tmux on Unix and macOS, follow these steps:
 
 1. Open a terminal window.
 2. Enter the following command to install tmux: 
 
-   ```bash
-   sudo apt-get install tmux
-```
-Alternatively, you can install it using Homebrew on macOS:
 ```bash
-brew install tmux`
+sudo apt-get install tmux
 ```
 
-### Installing aria2c on Unix and macOS
+* On macOS you can install it using Homebrew :
 
-To install aria2c on Unix and macOS, follow these steps:
+```bash
+brew install tmux
+```
 
-    1. Open a terminal window.
-    2. Enter the following command to install aria2c:
-    ```bash
-    sudo apt-get install aria2
-    ```
-Alternatively, you can install it using Homebrew on macOS:
+### Installing aria2c on Unix
+
+* To install aria2c on Unix and macOS, follow these steps:
+
+1. Open a terminal window.
+2. Enter the following command to install aria2c:
+    
+```bash
+sudo apt-get install aria2
+```
+
+* On macOS you can install it using Homebrew :
+
 ```bash
 brew install aria2
 ```
@@ -42,7 +47,6 @@ brew install aria2
 1. Clone this repository to your local machine.
 2. Install the required dependencies by running `pip install -r requirements.txt`.
 3. Copy the `config.sample.py` file to `config.py` and add your Telegram bot token and allowed chat IDs with their passwords.
-4. Run the `start_bot.sh` script to start the bot. It will open a new tmux session and start the bot inside it.
 
 ## Run
 To start the bot, you can run the startBot script
