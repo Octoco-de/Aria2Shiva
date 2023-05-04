@@ -62,8 +62,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await check_user_permission(update):
         return
+    
+    help_text = "Hello! This bot can help you search for and download torrents.\n\n"
+    help_text = "Available commands:\n\n"
+    help_text += "/search <movie title> - Search for a movie on YTS\n"
+    help_text += "/download <link to torrent url or magnet link> - Download a torrent or magnet link\n"
+    help_text += "\nYou can also send torrent files or magnet links directly to the bot to download them."
 
-    await update.message.reply_text("Help!")
+    await update.message.reply_text(help_text)
+
 
 async def textHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
@@ -135,7 +142,6 @@ def main() -> None:
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler("download", download_command))
-    application.add_handler(CommandHandler("password", password_check))
     application.add_handler(CommandHandler("whoami", who_am_i))
 
     application.add_handler(CallbackQueryHandler(button_callback))
