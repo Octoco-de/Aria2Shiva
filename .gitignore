@@ -5,6 +5,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+nohup.out
 
 # Environment
 env
@@ -79,6 +80,7 @@ typings/
 .yarn-integrity
 
 # dotenv environment variables file
+#
 .env
 .env.test
 
