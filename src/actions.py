@@ -9,8 +9,10 @@ from telegram.ext import ContextTypes
 from pathlib import Path
 
 from src.yts import search, get_movie_details
-from src.utils import constrain_text_to_length 
+from src.utils import constrain_text_to_length, validateDirectory
+from config import download_directory
 
+from pathlib import Path
 
 
 # Create a movie button for the inline keyboard
@@ -146,10 +148,12 @@ async def download_torrent(update: Update, context: ContextTypes.DEFAULT_TYPE, c
         tmux_cmd = ['tmux', 'new-session', '-d', '-s', tmux_session_name]
         subprocess.run(tmux_cmd, check=True)
 
-        download_directory = os.path.expanduser('~/Torrents')
+         # Use the download_directory from config if it's defined, otherwise use the default directory
+        directory = download_directory if download_directory else os.path.expanduser('~/Torrents')
+        validateDirectory(directory)    
 
         aria2c_cmd = [
-            'cd', download_directory, '&&', 'aria2c', url, '-s', '16', '-x', '16', '-k', '1M', '-c', '--seed-time=0'
+            'cd', directory, '&&', 'aria2c', url, '-s', '16', '-x', '16', '-k', '1M', '-c', '--seed-time=0'
         ]
 
         # Execute the aria2c command and close the tmux session when the process is done

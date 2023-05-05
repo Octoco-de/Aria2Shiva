@@ -31,17 +31,23 @@ logger = logging.getLogger(__name__)
 
 allowed_chat_ids = {chat_id: {"password": password, "last_login": 0} for chat_id, password in allowedIDs.items()}
 
+def user_is_logged_in(update: Update) -> bool:
+    chat_id = update.effective_chat.id
+    last_login = allowed_chat_ids.get(chat_id, {}).get("last_login")
+    current_time = time.time()
+    if not last_login or current_time - last_login > 8 * 60 * 60:  # 8 hours in seconds
+        return False
+    return True
+
 async def check_user_permission(update: Update) -> bool:
     chat_id = update.effective_chat.id
     user_allowed = chat_id in allowed_chat_ids
 
     if user_allowed:
-        last_login = allowed_chat_ids[chat_id]["last_login"]
-        current_time = time.time()
-        if current_time - last_login > 8 * 60 * 60:  # 8 hours in seconds
-            await update.message.reply_text("Speak, friend, and enter")
-            return False
-        return True
+        if user_is_logged_in(update):  # 8 hours in seconds
+            return True
+        await update.message.reply_text("Speak, friend, and enter")
+        return False
     else:
         await update.message.reply_animation("https://media.giphy.com/media/njYrp176NQsHS/giphy.gif")
         return False
@@ -62,8 +68,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await check_user_permission(update):
         return
+    
+    help_text = "Hello! This bot can help you search for and download torrents.\n\n"
+    help_text = "Available commands:\n\n"
+    help_text += "/search <movie title> - Search for a movie on YTS\n"
+    help_text += "/download <link to torrent url or magnet link> - Download a torrent or magnet link\n"
+    help_text += "\nYou can also send torrent files or magnet links directly to the bot to download them."
 
-    await update.message.reply_text("Help!")
+    await update.message.reply_text(help_text)
+
 
 async def textHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
@@ -75,10 +88,15 @@ async def textHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_animation("https://szeged365.hu/wp-content/uploads/2020/12/lotr-door-.gif")
         return
 
+    mellon_pattern = re.compile(r'\b(?:M|m)ellon\b')
+    if not user_is_logged_in(update) and mellon_pattern.search(message_text):
+        await update.message.reply_text("That only works on Moria")
+        return
+
     if not await check_user_permission(update):
         return
 
-    message_text = update.message.text
+    
     magnet_or_torrent = re.search(r"(magnet:\?xt=urn:btih:[a-zA-Z0-9]+)|(https?://.*\.(torrent))", message_text)
 
     if magnet_or_torrent:
@@ -135,7 +153,6 @@ def main() -> None:
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler("download", download_command))
-    application.add_handler(CommandHandler("password", password_check))
     application.add_handler(CommandHandler("whoami", who_am_i))
 
     application.add_handler(CallbackQueryHandler(button_callback))
