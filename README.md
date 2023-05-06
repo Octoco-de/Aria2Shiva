@@ -45,7 +45,7 @@ brew install aria2
 ## Installation
 
 1. Clone this repository to your local machine.
-2. Install the required dependencies by running `pip install -r requirements.txt`.
+2. Install the required dependencies by running `pip install -r Requirements.txt`.
 3. Copy the `config.sample.py` file to `config.py` and add your Telegram bot token and allowed chat IDs with their passwords.
 
 ## Run
