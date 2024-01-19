@@ -17,7 +17,12 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
     )
 from telegram import ForceReply, Update, InputMediaAnimation
 from telegram.ext import (
-    Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+    CallbackQueryHandler,
 )
 
 # Import the action functions from actions.py
@@ -29,7 +34,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-allowed_chat_ids = {chat_id: {"password": password, "last_login": 0} for chat_id, password in allowedIDs.items()}
+allowed_chat_ids = {
+    chat_id: {"password": password, "last_login": 0}
+    for chat_id, password in allowedIDs.items()
+}
+
 
 def user_is_logged_in(update: Update) -> bool:
     chat_id = update.effective_chat.id
@@ -38,6 +47,7 @@ def user_is_logged_in(update: Update) -> bool:
     if not last_login or current_time - last_login > 8 * 60 * 60:  # 8 hours in seconds
         return False
     return True
+
 
 async def check_user_permission(update: Update) -> bool:
     chat_id = update.effective_chat.id
@@ -49,7 +59,9 @@ async def check_user_permission(update: Update) -> bool:
         await update.message.reply_text("Speak, friend, and enter")
         return False
     else:
-        await update.message.reply_animation("https://media.giphy.com/media/njYrp176NQsHS/giphy.gif")
+        await update.message.reply_animation(
+            "https://media.giphy.com/media/njYrp176NQsHS/giphy.gif"
+        )
         return False
 
 
@@ -65,10 +77,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup=ForceReply(selective=True),
     )
 
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await check_user_permission(update):
         return
-    
+
     help_text = "Hello! This bot can help you search for and download torrents.\n\n"
     help_text = "Available commands:\n\n"
     help_text += "/search <movie title> - Search for a movie on YTS\n"
@@ -81,14 +94,18 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def textHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
 
-    
     message_text = update.message.text
-    if chat_id in allowed_chat_ids and allowed_chat_ids[chat_id]["password"] == message_text:
+    if (
+        chat_id in allowed_chat_ids
+        and allowed_chat_ids[chat_id]["password"] == message_text
+    ):
         allowed_chat_ids[chat_id]["last_login"] = time.time()
-        await update.message.reply_animation("https://szeged365.hu/wp-content/uploads/2020/12/lotr-door-.gif")
+        await update.message.reply_animation(
+            "https://szeged365.hu/wp-content/uploads/2020/12/lotr-door-.gif"
+        )
         return
 
-    mellon_pattern = re.compile(r'\b(?:M|m)ellon\b')
+    mellon_pattern = re.compile(r"\b(?:M|m)ellon\b")
     if not user_is_logged_in(update) and mellon_pattern.search(message_text):
         await update.message.reply_text("That only works on Moria")
         return
@@ -96,8 +113,9 @@ async def textHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not await check_user_permission(update):
         return
 
-    
-    magnet_or_torrent = re.search(r"(magnet:\?xt=urn:btih:[a-zA-Z0-9]+)|(https?://.*\.(torrent))", message_text)
+    magnet_or_torrent = re.search(
+        r"(magnet:\?xt=urn:btih:[a-zA-Z0-9]+)|(https?://.*\.(torrent))", message_text
+    )
 
     if magnet_or_torrent:
         context.args = [message_text]
@@ -111,36 +129,43 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     chat_id = update.effective_chat.id
-    query = ' '.join(context.args)
+    query = " ".join(context.args)
     if query:
         await search_movie(update, context, chat_id, query)
     else:
         await update.message.reply_text("Please provide a movie title to search for.")
+
 
 async def download_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await check_user_permission(update):
         return
 
     chat_id = update.effective_chat.id
-    torrent_url = ' '.join(context.args)
+    torrent_url = " ".join(context.args)
     if torrent_url:
         await download_torrent(update, context, chat_id, torrent_url)
     else:
-        await update.message.reply_text("Please provide a torrent URL or a magnet link to download.")
+        await update.message.reply_text(
+            "Please provide a torrent URL or a magnet link to download."
+        )
+
 
 async def password_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     password = update.message.text
-    if chat_id in allowed_chat_ids and allowed_chat_ids[chat_id]["password"] == password:
+    if (
+        chat_id in allowed_chat_ids
+        and allowed_chat_ids[chat_id]["password"] == password
+    ):
         allowed_chat_ids[chat_id]["last_login"] = time.time()
         await update.message.reply_text("Welcome!")
     else:
         await update.message.reply_text("Incorrect password.")
 
+
 async def who_am_i(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     await update.message.reply_text(f"{chat_id}")
-
 
 
 def main() -> None:
@@ -158,10 +183,13 @@ def main() -> None:
     application.add_handler(CallbackQueryHandler(button_callback))
 
     # on non command i.e message - echo the message on Telegram
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, textHandler))
+    application.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, textHandler)
+    )
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling()
+
 
 if __name__ == "__main__":
     main()
