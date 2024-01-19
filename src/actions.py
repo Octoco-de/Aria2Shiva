@@ -15,6 +15,9 @@ from config import download_directory
 
 from pathlib import Path
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 # Create a movie button for the inline keyboard
 def movie_button(movie):
@@ -240,7 +243,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         _, movie_id, torrent_index = data.split(":")
         torrent_index = int(torrent_index)
         movie_data = await get_movie_details(movie_id)
+        logger.info(f"movie_data ${movie_data}")
+        logger.info(f"torrent_index ${torrent_index}")
         torrent_url = movie_data["torrents"][torrent_index]["url"]
+        logger.info(f"torrent_url ${torrent_url}")
         await download_torrent(update, context, chat_id, torrent_url)
     else:
         await context.bot.send_message(chat_id, "Unknown command. Please try again.")

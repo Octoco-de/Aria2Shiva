@@ -1,6 +1,7 @@
 import aiohttp
 import logging
 import requests
+import urllib.parse
 
 base_url = "https://yts.proxyninja.net/api/v2/"
 logging.basicConfig(level=logging.INFO)
@@ -50,6 +51,20 @@ async def get_movie_details(movie_id):
     url = f"{base_url}movie_details.json"
     params = {"movie_id": movie_id}
 
+    trackers = [
+        "udp://glotorrents.pw:6969/announce",
+        "udp://tracker.opentrackr.org:1337/announce",
+        "udp://torrent.gresille.org:80/announce",
+        "udp://tracker.openbittorrent.com:80",
+        "udp://tracker.coppersurfer.tk:6969",
+        "udp://tracker.leechers-paradise.org:6969",
+        "udp://p4p.arenabg.ch:1337",
+        "udp://tracker.internetwarriors.net:1337",
+        "udp://open.demonii.com:1337/announce",
+        "udp://p4p.arenabg.com:1337",
+    ]
+    tracker_str = "&tr=" + "&tr=".join(trackers)
+
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
@@ -57,23 +72,30 @@ async def get_movie_details(movie_id):
         data = response.json()
         movie = data.get("data", {}).get("movie", {})
 
-        torrents = [
-            {
-                "movieId": movie["id"],
-                "url": torrent["url"],
-                "quality": torrent["quality"],
-                "size": torrent["size"],
-            }
-            for torrent in movie.get("torrents", [])
-        ]
+        logger.info(f"movie data response: {movie}")
+
+        torrents = movie.get("torrents", [])
+        encoded_movie_title = urllib.parse.quote_plus(movie["title"])
+
+        magnet_links = []
+        for torrent in torrents:
+            magnet_url = f"magnet:?xt=urn:btih:{torrent['hash']}&dn={encoded_movie_title}{tracker_str}"
+            magnet_links.append(
+                {
+                    "movieId": movie["id"],
+                    "url": magnet_url,
+                    "quality": torrent["quality"],
+                    "size": torrent["size"],
+                }
+            )
 
         movie_data = {
             "id": movie["id"],
-            "title": f"({movie['year']}) - {movie['title']}",
+            "title": movie["title"],
             "language": movie["language"],
             "image": movie["medium_cover_image"],
             "summary": movie["description_full"],
-            "torrents": torrents,
+            "torrents": magnet_links,
             "url": movie["url"],
         }
 
